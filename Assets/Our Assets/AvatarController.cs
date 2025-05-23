@@ -1,49 +1,35 @@
 using UnityEngine;
-
+using System.Collections.Generic;
 public class GestureAgentController : MonoBehaviour
 {
     public OVRHand leftHand;
     public OVRSkeleton leftSkeleton;
-    public GameObject agent; 
+    public GameObject agent;
     public float moveSpeed = 1f;
 
     public Animator agentAnimator;
-
+    List<OVRBone> bones;
     void Start()
     {
         if (agent != null)
         {
             agentAnimator = agent.GetComponent<Animator>();
         }
+
+        bones = new List<OVRBone>(leftSkeleton.Bones);
     }
 
     void Update()
     {
         if (leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index))
         {
-            Vector3 indexTip = leftSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_IndexTip].Transform.position;
-            Vector3 handCenter = leftSkeleton.transform.position;
-            Vector3 direction = (indexTip - handCenter).normalized;
+            
+            Transform tip = GetBoneTransform(OVRSkeleton.BoneId.Hand_IndexTip, bones);
+            Transform baseBone = GetBoneTransform(OVRSkeleton.BoneId.Hand_Index1, bones);
+            Vector3 direction = (tip.position - baseBone.position).normalized;
+            direction.y = 0; // Ignore vertical movement
 
-            float dotLeft = Vector3.Dot(direction, Vector3.left);
-            float dotRight = Vector3.Dot(direction, Vector3.right);
-            float dotForward = Vector3.Dot(direction, Vector3.forward);
-
-            // Check for left
-            if (dotLeft > 0.7f)
-            {
-                TryMoveAgent(Vector3.left);
-            }
-            // Check for right
-            else if (dotRight > 0.7f)
-            {
-                TryMoveAgent(Vector3.right);
-            }
-            // Check for forward
-            else if (dotForward > 0.7f)
-            {
-                TryMoveAgent(Vector3.forward);
-            }
+            TryMoveAgent(direction);
         }
     }
 
@@ -60,5 +46,15 @@ public class GestureAgentController : MonoBehaviour
         {
             Debug.Log("Obstacle detected, can't move agent.");
         }
+    }
+    
+    Transform GetBoneTransform(OVRSkeleton.BoneId boneId, List<OVRBone> bones)
+    {
+        foreach (var bone in bones)
+        {
+            if (bone.Id == boneId)
+                return bone.Transform;
+        }
+        return null;
     }
 }
