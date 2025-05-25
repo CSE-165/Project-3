@@ -1,14 +1,22 @@
 using UnityEngine;
 using System.Collections.Generic;
 public class GestureAgentController : MonoBehaviour
+
 {
+    [Header("Reference Objects")]
     public OVRHand leftHand;
     public OVRSkeleton leftSkeleton;
     public GameObject agent;
-    public float moveSpeed = 1f;
 
+    private Vector3 initialPos;
+    private bool isDragging = false;
     public Animator agentAnimator;
     List<OVRBone> bones;
+
+    [Header("Ray Settings")]
+    private LineRenderer lineRenderer;
+    public Color rayColor = Color.blue;
+    public float rayWidth = 0.01f;
     void Start()
     {
         if (agent != null)
@@ -17,25 +25,72 @@ public class GestureAgentController : MonoBehaviour
         }
 
         bones = new List<OVRBone>(leftSkeleton.Bones);
+
+        GameObject rayObject = new GameObject("PinchRay");
+        rayObject.transform.parent = this.transform;
+
+        lineRenderer = rayObject.AddComponent<LineRenderer>();
+        lineRenderer.enabled = false;
+        lineRenderer.positionCount = 2;
+
+        // Set LineRenderer properties
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.startColor = rayColor;
+        lineRenderer.endColor = rayColor;
+        lineRenderer.startWidth = rayWidth;
+        lineRenderer.endWidth = rayWidth;
+        lineRenderer.useWorldSpace = true;
     }
 
     void Update()
     {
-        if (leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index))
-        {
-            
-            Transform tip = GetBoneTransform(OVRSkeleton.BoneId.Hand_IndexTip, bones);
-            Transform baseBone = GetBoneTransform(OVRSkeleton.BoneId.Hand_Index1, bones);
-            Vector3 direction = (tip.position - baseBone.position).normalized;
-            direction.y = 0; // Ignore vertical movement
 
-            TryMoveAgent(direction);
+        bool isPinching = leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
+
+        if (isPinching)
+        {
+            if (!isDragging)
+            {
+                initialPos = leftHand.PointerPose.position;
+                isDragging = true;
+            }
+            else
+            {
+                ShowRay(initialPos, leftHand.PointerPose.position);
+            }
+        }
+        else if (!isPinching)
+        {
+            HideRay();
+            isDragging = false;
+        }
+
+        if (isDragging)
+        {
+            Vector3 dragVector = leftHand.PointerPose.position - initialPos;
+            dragVector.y = 0f; // Ignore vertical movement
+
+            TryMoveAgent(dragVector, dragVector.magnitude);
+
         }
     }
 
-    void TryMoveAgent(Vector3 direction)
+    void ShowRay(Vector3 start, Vector3 end)
     {
-        Vector3 targetPos = agent.transform.position + direction * moveSpeed * Time.deltaTime;
+        lineRenderer.enabled = true;
+        lineRenderer.positionCount = 2;
+        lineRenderer.SetPosition(0, start);
+        lineRenderer.SetPosition(1, end);
+    }
+
+    void HideRay()
+    {
+        lineRenderer.enabled = false;
+    }
+
+    void TryMoveAgent(Vector3 direction, float moveSpeed)
+    {
+        Vector3 targetPos = agent.transform.position + direction.normalized * 2 * moveSpeed * Time.deltaTime;
 
         // Raycast to detect obstacles
         if (!Physics.Raycast(agent.transform.position, direction, 0.5f))
@@ -47,7 +102,7 @@ public class GestureAgentController : MonoBehaviour
             Debug.Log("Obstacle detected, can't move agent.");
         }
     }
-    
+
     Transform GetBoneTransform(OVRSkeleton.BoneId boneId, List<OVRBone> bones)
     {
         foreach (var bone in bones)
@@ -57,4 +112,18 @@ public class GestureAgentController : MonoBehaviour
         }
         return null;
     }
+    
+    // public void SetWalkingAnimation(bool isWalking)
+    // {
+    //     if (isWalking)
+    //     {
+    //         agentAnimator.SetBool("Walking", true);
+    //         agentAnimator.SetBool("Standing Idle", false);
+    //     }
+    //     else
+    //     {
+    //         agentAnimator.SetBool("Walking", false);
+    //         agentAnimator.SetBool("Standing Idle", true);
+    //     }
+    // }
 }
