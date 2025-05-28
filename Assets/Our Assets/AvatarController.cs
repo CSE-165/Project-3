@@ -90,7 +90,7 @@ public class GestureAgentController : MonoBehaviour
             {
                 //place anchor
                 Vector3 anchorPosition = leftHand.PointerPose.position;
-                Quaternion fullRotation = camera.transform.rotation;
+                Quaternion fullRotation = leftHand.PointerPose.rotation;
 
                 // Extract the Y (yaw) angle only
                 float yRotation = fullRotation.eulerAngles.y;
