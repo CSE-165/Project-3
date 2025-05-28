@@ -11,12 +11,21 @@ public class GestureAgentController : MonoBehaviour
     private Vector3 initialPos;
     private bool isDragging = false;
     public Animator agentAnimator;
+   
     List<OVRBone> bones;
 
     [Header("Ray Settings")]
     private LineRenderer lineRenderer;
     public Color rayColor = Color.blue;
     public float rayWidth = 0.01f;
+
+    
+    [Header("Other")]
+    private bool firstPinch = true;
+    public GameObject anchorPrefab;
+
+    public GameObject camera;
+
     void Start()
     {
         if (agent != null)
@@ -46,6 +55,7 @@ public class GestureAgentController : MonoBehaviour
     {
 
         bool isPinching = leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
+        bool isPinchingMiddle = leftHand.GetFingerIsPinching(OVRHand.HandFinger.Middle);
 
         if (isPinching)
         {
@@ -72,6 +82,29 @@ public class GestureAgentController : MonoBehaviour
 
             TryMoveAgent(dragVector, dragVector.magnitude);
 
+        }
+
+        if (isPinchingMiddle)
+        {
+            if (firstPinch)
+            {
+                //place anchor
+                Vector3 anchorPosition = leftHand.PointerPose.position;
+                Quaternion fullRotation = camera.transform.rotation;
+
+                // Extract the Y (yaw) angle only
+                float yRotation = fullRotation.eulerAngles.y;
+
+                // Create a new rotation with only the Y component
+                Quaternion yOnlyRotation = Quaternion.Euler(0, yRotation, 0);
+                Instantiate(anchorPrefab, anchorPosition, yOnlyRotation);
+            }
+            
+            firstPinch = false;
+        }
+        else
+        {
+            firstPinch = true;
         }
     }
 
