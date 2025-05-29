@@ -123,17 +123,21 @@ public class GestureAgentController : MonoBehaviour
 
     void TryMoveAgent(Vector3 direction, float moveSpeed)
     {
-        Vector3 targetPos = agent.transform.position + direction.normalized * 2 * moveSpeed * Time.deltaTime;
-
-        // Raycast to detect obstacles
-        if (!Physics.Raycast(agent.transform.position, direction, 0.5f))
+        float radius = 0.5f;
+        float distance = 2 * moveSpeed * Time.deltaTime;
+        // Check for collision in the movement direction
+        if (!Physics.SphereCast(agent.transform.position, radius, direction.normalized, out RaycastHit hit, distance))
         {
+            // No obstacle, so move the agent
+            Vector3 targetPos = agent.transform.position + direction.normalized * distance;
             agent.transform.position = targetPos;
         }
         else
         {
-            Debug.Log("Obstacle detected, can't move agent.");
+            Debug.Log("Movement blocked by wall!");
         }
+
+        
     }
 
     Transform GetBoneTransform(OVRSkeleton.BoneId boneId, List<OVRBone> bones)
